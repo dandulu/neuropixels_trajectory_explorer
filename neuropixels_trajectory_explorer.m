@@ -168,11 +168,10 @@ title(axes_probe_areas,'Probe areas');
 
 probe_controls_menu = uimenu(probe_atlas_gui,'Text','Probe controls');
 uimenu(probe_controls_menu,'Text','Display controls','MenuSelectedFcn',{@popup_controls,probe_atlas_gui});
-uimenu(probe_controls_menu,'Text','Add probe','MenuSelectedFcn',{@probe_add,probe_atlas_gui});
-uimenu(probe_controls_menu,'Text','Remove selected probe','MenuSelectedFcn',{@probe_remove,probe_atlas_gui});
 uimenu(probe_controls_menu,'Text','Set entry','MenuSelectedFcn',{@set_probe_entry,probe_atlas_gui});
 uimenu(probe_controls_menu,'Text','Set endpoint','MenuSelectedFcn',{@set_probe_endpoint,probe_atlas_gui});
-uimenu(probe_controls_menu,'Text','Probe properties','MenuSelectedFcn',{@probe_properties,probe_atlas_gui});
+uimenu(probe_controls_menu,'Text','Add probe','MenuSelectedFcn',{@probe_add,probe_atlas_gui});
+uimenu(probe_controls_menu,'Text','Remove probe','MenuSelectedFcn',{@probe_remove,probe_atlas_gui});
 
 scaling_menu = uimenu(probe_atlas_gui,'Text','Brain scaling');
 uimenu(scaling_menu,'Text','Set bregma-lambda distance','MenuSelectedFcn',{@set_bregma_lambda_distance,probe_atlas_gui});
@@ -204,6 +203,7 @@ connect_menu = uimenu(probe_atlas_gui,'Text','Connect');
 manipulator_menu = uimenu(connect_menu,'Text','Manipulator');
 uimenu(manipulator_menu,'Text','New Scale MPM','MenuSelectedFcn',{@connect_newscale,probe_atlas_gui});
 uimenu(manipulator_menu,'Text','Scientifica Patchstar','MenuSelectedFcn',{@connect_scientifica,probe_atlas_gui});
+uimenu(manipulator_menu,'Text','Sutter','MenuSelectedFcn',{@connect_sutter,probe_atlas_gui});
 record_menu = uimenu(connect_menu,'Text','Recording');
 uimenu(record_menu,'Text','OpenEphys','MenuSelectedFcn',{@connect_openephys,probe_atlas_gui});
 uimenu(record_menu,'Text','SpikeGLX','MenuSelectedFcn',{@connect_spikeglx,probe_atlas_gui});
@@ -345,21 +345,21 @@ end
 % Draw updated probe
 if any([ap_offset,ml_offset,probe_offset])
     % (AP/ML)
-    set(gui_data.probe(gui_data.selected_probe).trajectory,'XData', ...
-        get(gui_data.probe(gui_data.selected_probe).trajectory,'XData') + ml_offset);
-    set(gui_data.probe(gui_data.selected_probe).line,'XData', ...
-        get(gui_data.probe(gui_data.selected_probe).line,'XData') + ml_offset);
-    set(gui_data.probe(gui_data.selected_probe).trajectory,'YData', ...
-        get(gui_data.probe(gui_data.selected_probe).trajectory,'YData') + ap_offset);
-    set(gui_data.probe(gui_data.selected_probe).line,'YData', ...
-        get(gui_data.probe(gui_data.selected_probe).line,'YData') + ap_offset);
+    set(gui_data.handles.trajectory_line(gui_data.selected_probe),'XData', ...
+        get(gui_data.handles.trajectory_line(gui_data.selected_probe),'XData') + ml_offset);
+    set(gui_data.handles.probe_line(gui_data.selected_probe),'XData', ...
+        get(gui_data.handles.probe_line(gui_data.selected_probe),'XData') + ml_offset);
+    set(gui_data.handles.trajectory_line(gui_data.selected_probe),'YData', ...
+        get(gui_data.handles.trajectory_line(gui_data.selected_probe),'YData') + ap_offset);
+    set(gui_data.handles.probe_line(gui_data.selected_probe),'YData', ...
+        get(gui_data.handles.probe_line(gui_data.selected_probe),'YData') + ap_offset);
     % (probe axis)
-    old_probe_vector = cell2mat(get(gui_data.probe(gui_data.selected_probe).line, ...
+    old_probe_vector = cell2mat(get(gui_data.handles.probe_line(gui_data.selected_probe), ...
         {'XData','YData','ZData'})');
     move_probe_vector = diff(old_probe_vector,[],2)./ ...
         norm(diff(old_probe_vector,[],2))*probe_offset;
     new_probe_vector = bsxfun(@plus,old_probe_vector,move_probe_vector);
-    set(gui_data.probe(gui_data.selected_probe).line,'XData',new_probe_vector(1,:), ...
+    set(gui_data.handles.probe_line(gui_data.selected_probe),'XData',new_probe_vector(1,:), ...
         'YData',new_probe_vector(2,:),'ZData',new_probe_vector(3,:));
 end
 % (angle)
@@ -402,12 +402,12 @@ if strcmp(gui_data.handles.slice_plot(1).Visible,'on')
     curr_campos = campos(gui_data.handles.axes_atlas);
 
     % Get probe vector
-    probe_ref_top = [gui_data.probe(gui_data.selected_probe).trajectory.XData(1), ...
-        gui_data.probe(gui_data.selected_probe).trajectory.YData(1), ...
-        gui_data.probe(gui_data.selected_probe).trajectory.ZData(1)];
-    probe_ref_bottom = [gui_data.probe(gui_data.selected_probe).trajectory.XData(2), ...
-        gui_data.probe(gui_data.selected_probe).trajectory.YData(2), ...
-        gui_data.probe(gui_data.selected_probe).trajectory.ZData(2)];
+    probe_ref_top = [gui_data.handles.trajectory_line(gui_data.selected_probe).XData(1), ...
+        gui_data.handles.trajectory_line(gui_data.selected_probe).YData(1), ...
+        gui_data.handles.trajectory_line(gui_data.selected_probe).ZData(1)];
+    probe_ref_bottom = [gui_data.handles.trajectory_line(gui_data.selected_probe).XData(2), ...
+        gui_data.handles.trajectory_line(gui_data.selected_probe).YData(2), ...
+        gui_data.handles.trajectory_line(gui_data.selected_probe).ZData(2)];
     probe_vector = probe_ref_top - probe_ref_bottom;
 
     % Get probe-camera vector
@@ -560,21 +560,21 @@ probe_ref_top = [probe_ref_top_ml,probe_ref_top_ap,0];
 probe_ref_bottom = probe_ref_top + [x,y,z];
 trajectory_vector = [probe_ref_top;probe_ref_bottom]';
 
-set(gui_data.probe(gui_data.selected_probe).trajectory, ...
+set(gui_data.handles.trajectory_line(gui_data.selected_probe), ...
     'XData',trajectory_vector(1,:), ...
     'YData',trajectory_vector(2,:), ...
     'ZData',trajectory_vector(3,:));
 
 probe_vector = [trajectory_vector(:,1),diff(trajectory_vector,[],2)./ ...
-    norm(diff(trajectory_vector,[],2))*gui_data.probe(gui_data.selected_probe).length + ...
+    norm(diff(trajectory_vector,[],2))*gui_data.probe_length(gui_data.selected_probe) + ...
     trajectory_vector(:,1)];
-set(gui_data.probe(gui_data.selected_probe).line, ...
+set(gui_data.handles.probe_line(gui_data.selected_probe), ...
     'XData',probe_vector(1,:), ...
     'YData',probe_vector(2,:), ...
     'ZData',probe_vector(3,:));
 
 % Upload gui_data
-gui_data.probe(gui_data.selected_probe).angle = probe_angle;
+gui_data.probe_angle{gui_data.selected_probe} = probe_angle;
 guidata(probe_atlas_gui, gui_data);
 
 % Update the slice and probe coordinates
@@ -620,22 +620,22 @@ probe_ref_top = [probe_ref_top_ml,probe_ref_top_ap,0];
 probe_ref_bottom = probe_ref_top + [x,y,z];
 trajectory_vector = [probe_ref_top;probe_ref_bottom]';
 
-set(gui_data.probe(gui_data.selected_probe).trajectory, ...
+set(gui_data.handles.trajectory_line(gui_data.selected_probe), ...
     'XData',trajectory_vector(1,:), ...
     'YData',trajectory_vector(2,:), ...
     'ZData',trajectory_vector(3,:));
 
 % Move probe (lock endpoint, back up length of probe)
 probe_vector = [diff(trajectory_vector,[],2)./ ...
-    norm(diff(trajectory_vector,[],2))*-gui_data.probe(gui_data.selected_probe).length + ...
+    norm(diff(trajectory_vector,[],2))*-gui_data.probe_length(gui_data.selected_probe) + ...
     new_probe_position([2,1,3]),new_probe_position([2,1,3])];
-set(gui_data.probe(gui_data.selected_probe).line, ...
+set(gui_data.handles.probe_line(gui_data.selected_probe), ...
     'XData',probe_vector(1,:), ...
     'YData',probe_vector(2,:), ...
     'ZData',probe_vector(3,:));
 
 % Upload gui_data
-gui_data.probe(gui_data.selected_probe).angle = (probe_angle_rad/(2*pi))*360;
+gui_data.probe_angle{gui_data.selected_probe} = (probe_angle_rad/(2*pi))*360;
 guidata(probe_atlas_gui, gui_data);
 
 % Update the slice and probe coordinates
@@ -651,21 +651,21 @@ function gui_data = update_probe_angle(probe_atlas_gui,angle_change)
 gui_data = guidata(probe_atlas_gui);
 
 % Get the positions of the probe and trajectory reference
-trajectory_vector = cell2mat(get(gui_data.probe(gui_data.selected_probe).trajectory,{'XData','YData','ZData'})');
-probe_vector = cell2mat(get(gui_data.probe(gui_data.selected_probe).line,{'XData','YData','ZData'})');
+trajectory_vector = cell2mat(get(gui_data.handles.trajectory_line(gui_data.selected_probe),{'XData','YData','ZData'})');
+probe_vector = cell2mat(get(gui_data.handles.probe_line(gui_data.selected_probe),{'XData','YData','ZData'})');
 
 % Update the probe trajectory reference angle
 
 % % (Old, unused: spherical/manipulator coordinates)
 % % Set new angle
-% new_angle = gui_data.probe.angle + angle_change;
-% gui_data.probe.angle = new_angle;
+% new_angle = gui_data.probe_angle + angle_change;
+% gui_data.probe_angle = new_angle;
 %
 % [ap_max,dv_max,ml_max] = size(gui_data.tv);
 %
 % max_ref_length = sqrt(sum(([ap_max,dv_max,ml_max].^2)));
 %
-% probe_angle_rad = (gui_data.probe.angle./360)*2*pi;
+% probe_angle_rad = (gui_data.probe_angle./360)*2*pi;
 % [x,y,z] = sph2cart(pi-probe_angle_rad(1),probe_angle_rad(2),max_ref_length);
 %
 % new_probe_ref_top = [trajectory_vector(1,1),trajectory_vector(2,1),0];
@@ -685,23 +685,23 @@ new_trajectory_vector = [trajectory_vector(:,1), ...
     diff(new_trajectory_vector(3,:)));
 probe_angle = rad2deg([probe_azimuth_sph,probe_elevation_sph]) + ...
     [360*(probe_azimuth_sph<0),0];
-gui_data.probe(gui_data.selected_probe).angle = probe_angle;
+gui_data.probe_angle{gui_data.selected_probe} = probe_angle;
 
-set(gui_data.probe(gui_data.selected_probe).trajectory, ...
+set(gui_data.handles.trajectory_line(gui_data.selected_probe), ...
     'XData',new_trajectory_vector(1,:), ...
     'YData',new_trajectory_vector(2,:), ...
     'ZData',new_trajectory_vector(3,:));
 
 % Update probe (retain depth)
 new_probe_vector = [new_trajectory_vector(:,1),diff(new_trajectory_vector,[],2)./ ...
-    norm(diff(new_trajectory_vector,[],2))*gui_data.probe(gui_data.selected_probe).length ...
+    norm(diff(new_trajectory_vector,[],2))*gui_data.probe_length(gui_data.selected_probe) ...
     + new_trajectory_vector(:,1)];
 
 probe_depth = sqrt(sum((trajectory_vector(:,1) - probe_vector(:,1)).^2));
 new_probe_vector_depth = (diff(new_probe_vector,[],2)./ ...
     norm(diff(new_probe_vector,[],2))*probe_depth) + new_probe_vector;
 
-set(gui_data.probe(gui_data.selected_probe).line, ...
+set(gui_data.handles.probe_line(gui_data.selected_probe), ...
     'XData',new_probe_vector_depth(1,:), ...
     'YData',new_probe_vector_depth(2,:), ...
     'ZData',new_probe_vector_depth(3,:));
@@ -718,8 +718,8 @@ function update_probe_coordinates(probe_atlas_gui,varargin)
 gui_data = guidata(probe_atlas_gui);
 
 % Get the positions of the probe and trajectory
-trajectory_vector = cell2mat(get(gui_data.probe(gui_data.selected_probe).trajectory,{'XData','YData','ZData'})');
-probe_vector = cell2mat(get(gui_data.probe(gui_data.selected_probe).line,{'XData','YData','ZData'})');
+trajectory_vector = cell2mat(get(gui_data.handles.trajectory_line(gui_data.selected_probe),{'XData','YData','ZData'})');
+probe_vector = cell2mat(get(gui_data.handles.probe_line(gui_data.selected_probe),{'XData','YData','ZData'})');
 
 trajectory_n_coords = round(max(abs(diff(trajectory_vector,[],2)))*1000); % 1um resolution
 [trajectory_ml_coords_bregma,trajectory_ap_coords_bregma,trajectory_dv_coords_bregma] = deal( ...
@@ -836,8 +836,8 @@ end
 % Update the text
 % (manipulator angles)
 probe_angle_text = sprintf('Probe angle:     % .0f%c azimuth, % .0f%c elevation', ...
-    gui_data.probe(gui_data.selected_probe).angle(1),char(176), ...
-    gui_data.probe(gui_data.selected_probe).angle(2),char(176));
+    gui_data.probe_angle{gui_data.selected_probe}(1),char(176), ...
+    gui_data.probe_angle{gui_data.selected_probe}(2),char(176));
 % (probe insertion point and depth)
 probe_insertion_text = sprintf('Probe insertion: % .2f AP, % .2f ML, % .2f depth', ...
     probe_bregma_coordinate(2),probe_bregma_coordinate(1),probe_depths(2));
@@ -869,9 +869,7 @@ probe_text = {probe_angle_text,probe_insertion_text, ...
 set(gui_data.probe_coordinates_text,'String',probe_text(cellfun(@(x) ~isempty(x),probe_text)));
 
 % If recording software is connected, send areas for display
-if isfield(gui_data,'connection') && ...
-        isfield(gui_data.connection,'recording')
-
+if isfield(gui_data,'connection') && isfield(gui_data.connection,'recording')
     send_recording_areas(gui_data, ...
         probe_depths, ...
         trajectory_area_boundaries, ...
@@ -977,12 +975,12 @@ function probe_add(~,~,probe_atlas_gui)
 gui_data = guidata(probe_atlas_gui);
 
 % Get index of new probe
-if ~isfield(gui_data,'probe')
+if ~isfield(gui_data.handles,'probe_line')
     % (first probe)
     new_probe_idx = 1;
 else
     % (additional probes)
-    new_probe_idx = length(gui_data.probe) + 1;
+    new_probe_idx = length(gui_data.handles.probe_line) + 1;
 end
 
 % Draw probe trajectory
@@ -1006,19 +1004,16 @@ set(probe_line,'ButtonDownFcn',{@select_probe,probe_atlas_gui});
 set(probe_line,'Tag','rotate_clickable'); % (even during rotate3d)
 
 % Store probe data and axes
-gui_data.probe(new_probe_idx).trajectory = trajectory_line; % Probe reference line on 3D atlas
-gui_data.probe(new_probe_idx).line = probe_line; % Probe reference line on 3D atlas
-gui_data.probe(new_probe_idx).length = probe_length; % Length of probe
-gui_data.probe(new_probe_idx).angle = [0;90]; % Probe angles in ML/DV
-
-% Set default recording slot (order of creation)
-gui_data.probe(new_probe_idx).recording_slot = new_probe_idx;
+gui_data.handles.trajectory_line(new_probe_idx) = trajectory_line; % Probe reference line on 3D atlas
+gui_data.handles.probe_line(new_probe_idx) = probe_line; % Probe reference line on 3D atlas
+gui_data.probe_length(new_probe_idx) = probe_length; % Length of probe
+gui_data.probe_angle{new_probe_idx} = [0;90]; % Probe angles in ML/DV
 
 % Update guidata
 guidata(probe_atlas_gui,gui_data);
 
 % Select probe
-select_probe(gui_data.probe(new_probe_idx).line,[],probe_atlas_gui)
+select_probe(gui_data.handles.probe_line(new_probe_idx),[],probe_atlas_gui)
 
 % Update probe coordinates
 update_probe_coordinates(probe_atlas_gui);
@@ -1038,25 +1033,25 @@ function probe_remove(~,~,probe_atlas_gui)
 gui_data = guidata(probe_atlas_gui);
 
 % If there's only one probe, don't do anything
-if length(gui_data.probe) == 1
+if length(gui_data.handles.probe_line) == 1
     return
 end
 
 % Delete selected probe graphics
-delete(gui_data.probe(gui_data.selected_probe).trajectory);
-delete(gui_data.probe(gui_data.selected_probe).line);
+delete(gui_data.handles.trajectory_line(gui_data.selected_probe));
+delete(gui_data.handles.probe_line(gui_data.selected_probe));
 
 % Delete selected probe data and handles
-gui_data.probe(gui_data.selected_probe).trajectory = [];
-gui_data.probe(gui_data.selected_probe).line = [];
-gui_data.probe(gui_data.selected_probe).length = [];
-gui_data.probe(gui_data.selected_probe).angle = [];
+gui_data.handles.trajectory_line(gui_data.selected_probe) = [];
+gui_data.handles.probe_line(gui_data.selected_probe) = [];
+gui_data.probe_length(gui_data.selected_probe) = [];
+gui_data.probe_angle(gui_data.selected_probe) = [];
 
 % Update guidata
 guidata(probe_atlas_gui,gui_data);
 
 % Select first probe
-select_probe(gui_data.probe(1).line,[],probe_atlas_gui);
+select_probe(gui_data.handles.probe_line(1),[],probe_atlas_gui);
 
 % Update probe coordinates
 update_probe_coordinates(probe_atlas_gui);
@@ -1065,55 +1060,6 @@ update_probe_coordinates(probe_atlas_gui);
 update_slice(probe_atlas_gui);
 
 end
-
-function probe_properties(~,~,probe_atlas_gui)
-% Set probe properties
-
-% Get guidata
-gui_data = guidata(probe_atlas_gui);
-n_probes = length(gui_data.probe);
-
-% Create editable properties box
-probe_properties_fig = uifigure('Name','Set probe properties');
-probe_properties_grid = uigridlayout(probe_properties_fig,[2,2]);
-probe_properties_grid.RowHeight = {'7x','1x'};
-
-probe_recording_slots = num2cell(vertcat(gui_data.probe.recording_slot));
-probe_types = repmat({'Npx 1.0'},n_probes,1);
-probe_properties = [probe_types,probe_recording_slots];
-
-probe_properties_table = uitable(probe_properties_grid, ...
-    'ColumnName',{'Probe type','Recording slot'}, ...
-    'ColumnFormat',{{'Npx 1.0','Npx 2.0'},'numeric'}, ...
-    'ColumnEditable',[true,true], ...
-    'RowName',arrayfun(@(x) sprintf('Probe %d',x),1:n_probes,'uni',false), ...
-    'Data',probe_properties);
-probe_properties_table.Layout.Column = [1,2];
-uibutton(probe_properties_grid,'push', ...
-    'Text','Save','ButtonPushedFcn',{@probe_properties_save,probe_atlas_gui});
-uibutton(probe_properties_grid,'push', ...
-    'Text','Cancel','ButtonPushedFcn',@probe_properties_cancel);
-
-% Probe properties box functions
-    function probe_properties_save(obj,eventdata,probe_atlas_gui)
-        % Get guidata
-        gui_data = guidata(probe_atlas_gui);
-
-        % Set recording slots
-        [gui_data.probe.recording_slot] = deal(obj.Parent.Children(1).Data{:,2});
-
-        % Update guidata
-        guidata(probe_atlas_gui,gui_data);
-
-        % Close properties box
-        close(obj.Parent.Parent);
-    end
-    function probe_properties_cancel(obj,eventdata)
-        % Close properties box
-        close(obj.Parent.Parent);
-    end
-end
-
 
 function set_bregma_lambda_distance(h,eventdata,probe_atlas_gui)
 
@@ -1417,8 +1363,8 @@ gui_data = guidata(probe_atlas_gui);
 
 % Toggle probe visibility
 switch h.Checked; case 'on'; new_visibility = 'off'; case 'off'; new_visibility = 'on'; end;
-set(gui_data.probe.trajectory,'Visible',new_visibility);
-set(gui_data.probe.line,'Visible',new_visibility);
+set(gui_data.handles.trajectory_line,'Visible',new_visibility);
+set(gui_data.handles.probe_line,'Visible',new_visibility);
 
 % Set menu item check
 h.Checked = new_visibility;
@@ -1479,14 +1425,14 @@ function save_probe_positions(h,eventdata,probe_atlas_gui)
 % Get guidata
 gui_data = guidata(probe_atlas_gui);
 
-n_probes = length(gui_data.probe);
+n_probes = length(gui_data.handles.probe_line);
 
 % Get CCF coordinates of the top/bottom of the probe
 [probe_ml_ccf,probe_ap_ccf,probe_dv_ccf] = ...
     transformPointsInverse(gui_data.ccf_bregma_tform, ...
-    vertcat(gui_data.probe.line.XData), ...
-    vertcat(gui_data.probe.line.YData), ...
-    vertcat(gui_data.probe.line.ZData));
+    vertcat(gui_data.handles.probe_line.XData), ...
+    vertcat(gui_data.handles.probe_line.YData), ...
+    vertcat(gui_data.handles.probe_line.ZData));
 
 % Package into CCF coordinates by probe ([AP,DV,ML])
 probe_positions_ccf = squeeze(mat2cell(permute(cat(3, ...
@@ -1498,9 +1444,9 @@ probe_areas = cell(n_probes,1);
 for curr_probe = 1:n_probes
 
     % Sample areas along probe every 1um
-    probe_vector = cell2mat(get(gui_data.probe(curr_probe).line,{'XData','YData','ZData'})');
+    probe_vector = cell2mat(get(gui_data.handles.probe_line(curr_probe),{'XData','YData','ZData'})');
     probe_n_coords = round(norm(diff(probe_vector,[],2))*1000);
-    probe_coords_depth = linspace(0,gui_data.probe.length(curr_probe)*1000-1,probe_n_coords);
+    probe_coords_depth = linspace(0,gui_data.probe_length(curr_probe)*1000-1,probe_n_coords);
 
     [probe_ml_coords_bregma,probe_ap_coords_bregma,probe_dv_coords_bregma] = deal( ...
         linspace(probe_vector(1,1),probe_vector(1,2),probe_n_coords), ...
@@ -1554,7 +1500,7 @@ gui_data = guidata(probe_atlas_gui);
 % Choose file and load
 [probe_file,probe_path] = uigetfile('probe_positions.mat','Choose probe positions to load...');
 probe_filename = fullfile(probe_path,probe_file);
-load(probe_filename);
+load(probe_filename);in 
 
 % Convert cell to matrix [probe,top/bottom,coord]
 probe_positions_ccf_cat = ...
@@ -1571,7 +1517,7 @@ probe_vector = [probe_ml_bregma;probe_ap_bregma;probe_dv_bregma];
 
 % Set number of probes equal to loaded probe number
 load_n_probes = length(probe_positions_ccf);
-curr_n_probes = length(gui_data.probe);
+curr_n_probes = length(gui_data.handles.probe_line);
 if curr_n_probes > load_n_probes
     for i = 1:(curr_n_probes - load_n_probes)
         probe_remove([],[],probe_atlas_gui);
@@ -1588,7 +1534,7 @@ end
 for curr_probe = 1:load_n_probes
 
     % Set probe location
-    set(gui_data.probe(curr_probe).line, ...
+    set(gui_data.handles.probe_line(curr_probe), ...
         'XData',probe_vector(1,:,curr_probe), ...
         'YData',probe_vector(2,:,curr_probe), ...
         'ZData',probe_vector(3,:,curr_probe));
@@ -1600,7 +1546,7 @@ for curr_probe = 1:load_n_probes
         diff(probe_vector(3,:,curr_probe)));
     probe_angle = rad2deg([probe_azimuth_sph,probe_elevation_sph]) + ...
         [360*(probe_azimuth_sph<0),0];
-    gui_data.probe(curr_probe).angle = probe_angle;
+    gui_data.probe_angle{curr_probe} = probe_angle;
 
     % Update trajectory reference (draw line through point and DV 0 with max length)
     ml_lim = xlim(gui_data.handles.axes_atlas);
@@ -1621,7 +1567,7 @@ for curr_probe = 1:load_n_probes
     probe_ref_bottom = probe_ref_top + [x,y,z];
     trajectory_vector = [probe_ref_top;probe_ref_bottom]';
 
-    set(gui_data.probe.trajectory(curr_probe), ...
+    set(gui_data.handles.trajectory_line(curr_probe), ...
         'XData',trajectory_vector(1,:), ...
         'YData',trajectory_vector(2,:), ...
         'ZData',trajectory_vector(3,:));
@@ -1692,7 +1638,7 @@ switch new_check
             matlab_settings.neuropixels_trajectory_explorer.newscale_port.PersonalValue = '8080';
         end
 
-        newscale_client_settings = inputdlg({'IP address (localhost if this computer):', ...
+        newscale_client_settings = inputdlg({'IP address (''localhost'' if this computer):', ...
             'Port (Pathfinder: Coordinate Sys > ... > Http server) :'},'Pathfinder',1, ...
             {matlab_settings.neuropixels_trajectory_explorer.newscale_ip.ActiveValue, ...
             matlab_settings.neuropixels_trajectory_explorer.newscale_port.ActiveValue});
@@ -1715,7 +1661,7 @@ switch new_check
         newscale_n_probes = newscale_client.AppData.Probes;
 
         % Set number of probes equal to MPM-connected probe number
-        user_n_probes = length(gui_data.probe);
+        user_n_probes = length(gui_data.handles.probe_line);
         if user_n_probes > newscale_n_probes
             for i = 1:(user_n_probes - newscale_n_probes)
                 probe_remove([],[],probe_atlas_gui);
@@ -1792,7 +1738,7 @@ for curr_newscale_probe = 1:gui_data.connection.manipulator.client.AppData.Probe
     probe_tip = [newscale_probe_info.Tip_X_ML; newscale_probe_info.Tip_Y_AP; -newscale_probe_info.Tip_Z_DV];
 
     % Check if any changes to probe (if not, skip)
-    curr_probe_position = cell2mat(get(gui_data.probe(curr_newscale_probe).line, ...
+    curr_probe_position = cell2mat(get(gui_data.handles.probe_line(curr_newscale_probe), ...
         {'XData','YData','ZData'})');
     if all(probe_tip == curr_probe_position(:,2))
         continue
@@ -1809,7 +1755,7 @@ for curr_newscale_probe = 1:gui_data.connection.manipulator.client.AppData.Probe
     [x,y,z] = sph2cart( ...
         deg2rad(90-mpm2nte_angles(1)),  ...
         deg2rad(180+mpm2nte_angles(2)), ...
-        gui_data.probe.length(curr_newscale_probe));
+        gui_data.probe_length(curr_newscale_probe));
     probe_top = probe_tip + [x; y; z];
 
     % Add DV offset relative to zeroing at brain surface (if applicable)
@@ -1824,10 +1770,10 @@ for curr_newscale_probe = 1:gui_data.connection.manipulator.client.AppData.Probe
     probe_vector = [probe_top, probe_tip] + manipulator_dv_offset;
 
     % Update angles
-    gui_data.probe.angle{curr_newscale_probe} = mpm2nte_angles;
+    gui_data.probe_angle{curr_newscale_probe} = mpm2nte_angles;
 
     % Change probe location
-    set(gui_data.probe(curr_newscale_probe).line, ...
+    set(gui_data.handles.probe_line(curr_newscale_probe), ...
         'XData',probe_vector(1,:), ...
         'YData',probe_vector(2,:), ...
         'ZData',probe_vector(3,:));
@@ -1851,7 +1797,7 @@ for curr_newscale_probe = 1:gui_data.connection.manipulator.client.AppData.Probe
 
     trajectory_vector = [probe_ref_top;probe_ref_bottom]';
 
-    set(gui_data.probe.trajectory(curr_newscale_probe), ...
+    set(gui_data.handles.trajectory_line(curr_newscale_probe), ...
         'XData',trajectory_vector(1,:), ...
         'YData',trajectory_vector(2,:), ...
         'ZData',trajectory_vector(3,:));
@@ -1870,7 +1816,7 @@ for curr_newscale_probe = 1:gui_data.connection.manipulator.client.AppData.Probe
 
     % Select MPM-selected probe (0-indexed, unselected = -1 so force >1)
     newscale_selected_probe = max(gui_data.connection.manipulator.client.AppData.SelectedProbe+1,1);
-    select_probe(gui_data.probe(newscale_selected_probe).line,[],probe_atlas_gui)
+    select_probe(gui_data.handles.probe_line(newscale_selected_probe),[],probe_atlas_gui)
 
     % Update the slice and probe coordinates
     update_probe_coordinates(probe_atlas_gui);
@@ -1890,9 +1836,9 @@ gui_data = guidata(probe_atlas_gui);
 
 % Get probe position
 probe_position = ...
-    [gui_data.probe(gui_data.selected_probe).line.XData; ...
-    gui_data.probe(gui_data.selected_probe).line.YData; ...
-    gui_data.probe(gui_data.selected_probe).line.ZData];
+    [gui_data.handles.probe_line(gui_data.selected_probe).XData; ...
+    gui_data.handles.probe_line(gui_data.selected_probe).YData; ...
+    gui_data.handles.probe_line(gui_data.selected_probe).ZData];
 probe_tip = probe_position(:,2);
 
 % Get brain surface at ML/AP position 
@@ -2013,17 +1959,17 @@ probe_angle = [90,scientifica_elevation_angle]; % TO DO: currently assume 90 azi
 [x,y,z] = sph2cart( ...
     deg2rad(90-probe_angle(1)),  ...
     deg2rad(180+probe_angle(2)), ...
-    gui_data.probe.length);
+    gui_data.probe_length);
 probe_top = probe_tip + [x; y; z];
 
 % Set probe vector
 probe_vector = [probe_top, probe_tip] ;
 
 % Update angles
-gui_data.probe.angle{1} = probe_angle;
+gui_data.probe_angle{1} = probe_angle;
 
 % Change probe location
-set(gui_data.probe(1).line, ...
+set(gui_data.handles.probe_line(1), ...
     'XData',probe_vector(1,:), ...
     'YData',probe_vector(2,:), ...
     'ZData',probe_vector(3,:));
@@ -2047,7 +1993,7 @@ probe_ref_bottom = probe_ref_top + [x,y,z];
 
 trajectory_vector = [probe_ref_top;probe_ref_bottom]';
 
-set(gui_data.probe.trajectory(1), ...
+set(gui_data.handles.trajectory_line(1), ...
     'XData',trajectory_vector(1,:), ...
     'YData',trajectory_vector(2,:), ...
     'ZData',trajectory_vector(3,:));
@@ -2080,6 +2026,320 @@ readline(gui_data.connection.manipulator.client); % Read feedback
 start(gui_data.connection.manipulator.timer_fcn);
 
 end
+
+function connect_sutter(h, eventdata, probe_atlas_gui)
+% Get guidata
+gui_data = guidata(probe_atlas_gui);
+disp("in the function")
+
+% Flip checked status
+switch h.Checked; case 'on'; new_check = 'off'; case 'off'; new_check = 'on'; end;
+h.Checked = new_check;
+
+switch new_check
+    case 'on'
+        disp("in case on")
+        % Create button: zero manipulator
+        button_fontsize = 12;
+        button_position = [0.75,0,0.15,0.05];
+        gui_data.handles.zero_manipulator_button = ...
+            uicontrol('Parent',probe_atlas_gui,'Style','pushbutton','FontSize',button_fontsize, ...
+            'Units','normalized','Position',button_position,'String','Zero manipulator', ...
+            'Callback',{@zero_sutter,probe_atlas_gui});
+
+        % Update gui data
+        guidata(probe_atlas_gui, gui_data);
+
+        % Add "connecting" message
+        set(gui_data.probe_coordinates_text,'String','CONNECTING TO SUTTER...');
+        set(gui_data.probe_coordinates_text,'Color','r')
+
+        % Check if input was canceled or is empty
+         % Prompt for COM port
+        prompt = {'Enter the COM port for the Sutter manipulator connection:'};
+        dlgtitle = 'Input COM Port';
+        num_lines = [1 50];
+        defaultans = {'COM9'}; % Change to the most common default port
+        answer = inputdlg(prompt, dlgtitle, num_lines, defaultans);
+
+        % Check if the dialog was cancelled
+        if isempty(answer)
+            disp('Sutter connection cancelled by user.');
+            set(gui_data.probe_coordinates_text,'String','SUTTER CONNECTION CANCELLED');
+            set(gui_data.probe_coordinates_text,'Color','r');
+            h.Checked = 'off'; % Reset the check state
+            return; % Exit the function
+        end
+        
+        sutter_connection=serialport("COM9", 128000, "Timeout",5,"Parity","none","StopBits",1,"DataBits",8,"FlowControl","none")
+
+        disp("getting status")
+
+        % send the request command
+        ba=uint8(0x55)
+        write(sutter_connection,ba,"uint8")
+        
+        %read it 
+        rspLength=6
+        rsp=read(sutter_connection,rspLength,"uint8")
+        
+        % Check if the response length is less than 6 bytes
+        if length(rsp) < 6
+            disp('Error: Not enough response bytes received from device.');
+            working_ones = []; % Return an empty array to indicate an error
+            return;
+        end
+        num_devices = rsp(1); % The first byte indicates the number of devices
+        devices = rsp(2:5); % Next four bytes are the device statuses
+        working_ones = find(devices == 1); % 'find' returns indices where the condition is true
+        fprintf('working arms are: %s\n', mat2str(working_ones));
+
+        % store the python object in matlab guidata
+        gui_data.connection.manipulator.model="Sutter";
+        gui_data.connection.manipulator.client=sutter_connection
+
+        % Set up timer function for updating probe position
+        manipulator_query_rate = 10; % queries per second
+        gui_data.connection.manipulator.timer_fcn = timer('TimerFcn', ...
+            {@get_sutter_position, probe_atlas_gui}, ...
+            'Period', 1/manipulator_query_rate, 'ExecutionMode', 'fixedSpacing', ...
+            'TasksToExecute', Inf);
+        
+        set(gui_data.probe_coordinates_text,'Color','k')
+        % Store timer function and start
+        % (necessary for the standalone, which deletes function on 'start')
+        guidata(probe_atlas_gui,gui_data);
+        start(gui_data.connection.manipulator.timer_fcn)
+    case 'off'
+        % Stop and delete timer function
+        try
+            stop(gui_data.connection.manipulator.timer_fcn)
+        catch
+        end
+        delete(gui_data.connection.manipulator.timer_fcn)
+
+        % Delete serial connection
+        delete(gui_data.connection.manipulator.client)
+        % Remove manipulator buttons
+        delete(gui_data.handles.zero_manipulator_button);
+end
+
+end
+
+
+
+
+function get_sutter_position(obj, event, probe_atlas_gui)
+    % Get guidata
+    gui_data = guidata(probe_atlas_gui);
+
+    % disp('Getting position');
+
+    % Send the position request command
+    write(gui_data.connection.manipulator.client, uint8(0x43), "uint8"); % 'C' command to get position
+
+    % Read the response, expected to be 14 bytes
+    rsp = read(gui_data.connection.manipulator.client, 14, "uint8");
+
+    % Check if the response length is less than 14 bytes
+    if length(rsp) < 14
+        disp('Error: Not enough response bytes received from device.');
+        set(gui_data.probe_coordinates_text,'String','POSITION QUERY FAILED', 'Color','r');
+        return; % Exit the function if an error occurs
+    end
+
+    % Decode the position from the response
+    xPos = typecast(uint8(rsp(2:5)), 'int32');
+    yPos = typecast(uint8(rsp(6:9)), 'int32');
+    zPos = typecast(uint8(rsp(10:13)), 'int32');
+
+    % Calculate the calibrated position in microns
+    calPosMicrons = [double(xPos), double(yPos), double(zPos)] / 16.0; % Assuming 16 microsteps per micron
+
+    % Convert the calibrated position to millimeters for GUI display
+    calPosMM = calPosMicrons / 1000; % Conversion from microns to millimeters
+
+    % Print out the converted position for debugging
+    % disp(['Converted position in mm: X=' num2str(calPosMM(1), '%.3f') ...
+    %       ', Y=' num2str(calPosMM(2), '%.3f') ', Z=' num2str(calPosMM(3), '%.3f')]);
+
+    % Check axes limits
+    x_limits = xlim(gui_data.handles.axes_atlas);
+    y_limits = ylim(gui_data.handles.axes_atlas);
+    z_limits = zlim(gui_data.handles.axes_atlas);
+
+    % disp(['Axes limits: X=' num2str(x_limits) ', Y=' num2str(y_limits) ', Z=' num2str(z_limits)]);
+
+    % Ensure the probe's line is within the visible range
+    if (calPosMM(1) < x_limits(1) || calPosMM(1) > x_limits(2) || ...
+        calPosMM(2) < y_limits(1) || calPosMM(2) > y_limits(2) || ...
+        calPosMM(3) < z_limits(1) || calPosMM(3) > z_limits(2))
+        % disp('Warning: The converted position is outside the visible axes limits!');
+    end
+
+    if isfield(gui_data, 'sutter_offset')
+        % disp("adjusting offset")
+        calPosMM = calPosMM - gui_data.sutter_offset;
+        calPosMM(1) = -calPosMM(1); % Negating X coordinate
+        % calPosMM(2) = -calPosMM(2); % Negating Y coordinate
+    end
+
+    % Update the probe location in the GUI
+    set(gui_data.handles.probe_line, 'XData', [calPosMM(1) calPosMM(1)], ...
+                                      'YData', [calPosMM(2) calPosMM(2)], ...
+                                      'ZData', [0 calPosMM(3)]);
+    if calPosMM(3)>0.02
+    trajectory_z=calPosMM(3)+4
+    else
+        trajectory_z=calPosMM(3)
+    end
+
+    % If the trajectory line should also show the path from a specific surface reference point
+    % to the probe tip, then you update it similarly:
+    set(gui_data.handles.trajectory_line, 'XData', [calPosMM(1) calPosMM(1)], ...
+                                          'YData', [calPosMM(2) calPosMM(2)], ...
+                                          'ZData', [0 trajectory_z], ... % same here for the straight path
+                                          'LineStyle', '--', 'Color', 'r'); % Customize as needed
+
+    % Update GUI text to reflect the new position in mm
+    set(gui_data.probe_coordinates_text, 'String', sprintf('X: %.3f mm Y: %.3f mm Z: %.3f mm', calPosMM), 'Color', 'k');
+
+    % Update gui data
+    guidata(probe_atlas_gui, gui_data);
+
+    % Update the slice and probe coordinates
+    update_probe_coordinates(probe_atlas_gui);
+
+    % Update slice
+    update_slice(probe_atlas_gui);
+
+    % Add any necessary updates that respond to the position change.
+    % This could be updating a slice view, re-scaling elements, or similar.
+    % The specifics will depend on your GUI's design and requirements.
+end
+
+function current_sutter_pos_mm = get_current_sutter_position(gui_data)
+    disp('get_current_sutter_position: Function called');
+
+    % Send the position request command
+    write(gui_data.connection.manipulator.client, uint8(0x43), "uint8");
+    disp('get_current_sutter_position: Position request command sent');
+
+    % Read the response, expected to be 14 bytes
+    rsp = read(gui_data.connection.manipulator.client, 14, "uint8");
+
+    % Check if the response length is less than 14 bytes
+    if length(rsp) < 14
+        disp('get_current_sutter_position: Error - Not enough response bytes received');
+        current_sutter_pos_mm = []; % Return empty if an error occurs
+        return;
+    end
+
+    % Decode the position from the response
+    xPos = typecast(uint8(rsp(2:5)), 'int32');
+    yPos = typecast(uint8(rsp(6:9)), 'int32');
+    zPos = typecast(uint8(rsp(10:13)), 'int32');
+
+    % Calculate the calibrated position in microns and convert to millimeters
+    current_sutter_pos_mm = [double(xPos), double(yPos), double(zPos)] / 16.0 / 1000;
+
+    disp(['get_current_sutter_position: Current position in mm - X: ', num2str(current_sutter_pos_mm(1)), ', Y: ', num2str(current_sutter_pos_mm(2)), ', Z: ', num2str(current_sutter_pos_mm(3))]);
+end
+
+% function zero_sutter(h, eventdata, probe_atlas_gui)
+%     % Get guidata
+%     gui_data = guidata(probe_atlas_gui);
+%     disp('zero_sutter: Function called');
+% 
+%     % Stop the timer function to prevent updates during zeroing
+%     if isfield(gui_data, 'connection') && isfield(gui_data.connection, 'manipulator') && isfield(gui_data.connection.manipulator, 'timer_fcn')
+%         disp('zero_sutter: Stopping timer function');
+%         stop(gui_data.connection.manipulator.timer_fcn);
+%     else
+%         disp('zero_sutter: Timer function not found or not running');
+%     end
+% 
+%     % Bregma coordinates in CCF (Common Coordinate Framework)
+%     bregma_ccf = [570.5, 520, 44]; % [ML, AP, DV] coordinates
+%     disp(['zero_sutter: Bregma CCF coordinates: ', num2str(bregma_ccf)]);
+% 
+%     % Transform bregma coordinates from CCF to GUI coordinate system
+%     [gui_bregma_ml, gui_bregma_ap, gui_bregma_dv] = transformPointsForward(gui_data.ccf_bregma_tform, bregma_ccf(1), bregma_ccf(2), bregma_ccf(3));
+%     disp(['zero_sutter: Transformed GUI coordinates: ML=', num2str(gui_bregma_ml), ', AP=', num2str(gui_bregma_ap), ', DV=', num2str(gui_bregma_dv)]);
+% 
+%     % Check if probe line handle exists
+%     if isfield(gui_data.handles, 'probe_line')
+%         % Update the probe's position in the GUI to bregma
+%         disp('zero_sutter: Updating probe line position');
+%         set(gui_data.handles.probe_line, 'XData', [gui_bregma_ml, gui_bregma_ml], ...
+%                                          'YData', [gui_bregma_ap, gui_bregma_ap], ...
+%                                          'ZData', [0, gui_bregma_dv]);
+%     else
+%         disp('zero_sutter: Probe line handle not found');
+%     end
+% 
+%     % Check if trajectory line handle exists
+%     if isfield(gui_data.handles, 'trajectory_line')
+%         % Update the trajectory line
+%         disp('zero_sutter: Updating trajectory line position');
+%         set(gui_data.handles.trajectory_line, 'XData', [gui_bregma_ml, gui_bregma_ml], ...
+%                                               'YData', [gui_bregma_ap, gui_bregma_ap], ...
+%                                               'ZData', [0, gui_bregma_dv]);
+%     else
+%         disp('zero_sutter: Trajectory line handle not found');
+%     end
+% 
+%     % Save the updated guidata
+%     guidata(probe_atlas_gui, gui_data);
+% 
+%     % Optionally, update the display to reflect the new probe position
+%     disp('zero_sutter: Updating probe coordinates');
+%     update_probe_coordinates(probe_atlas_gui);
+% 
+%     % Re-start the timer function
+%     if isfield(gui_data, 'connection') && isfield(gui_data.connection, 'manipulator') && isfield(gui_data.connection.manipulator, 'timer_fcn')
+%         disp('zero_sutter: Restarting timer function');
+%         start(gui_data.connection.manipulator.timer_fcn);
+%     else
+%         disp('zero_sutter: Timer function not found or not running');
+%     end
+% end
+
+function zero_sutter(h, eventdata, probe_atlas_gui)
+disp('zero_sutter: Function called');
+
+% Get guidata
+gui_data = guidata(probe_atlas_gui);
+
+% Stop the timer function
+if isfield(gui_data, 'connection') && isfield(gui_data.connection, 'manipulator') && isfield(gui_data.connection.manipulator, 'timer_fcn')
+    disp('zero_sutter: Stopping timer function');
+    stop(gui_data.connection.manipulator.timer_fcn);
+else
+    disp('zero_sutter: Timer function not found or not running');
+end
+
+% Get current Sutter position
+current_sutter_pos_mm = get_current_sutter_position(gui_data);
+
+% Set this position as the new zero point
+gui_data.sutter_offset = current_sutter_pos_mm;
+disp(['zero_sutter: New zero point set at - X: ', num2str(current_sutter_pos_mm(1)), ', Y: ', num2str(current_sutter_pos_mm(2)), ', Z: ', num2str(current_sutter_pos_mm(3))]);
+
+% Save the updated guidata
+guidata(probe_atlas_gui, gui_data);
+
+% Restart the timer function
+if isfield(gui_data, 'connection') && isfield(gui_data.connection, 'manipulator') && isfield(gui_data.connection.manipulator, 'timer_fcn')
+    disp('zero_sutter: Restarting timer function');
+    start(gui_data.connection.manipulator.timer_fcn);
+else
+    disp('zero_sutter: Timer function not found or not running');
+end
+end
+
+
+
 
 %% Recording interfacing
 
@@ -2122,7 +2382,7 @@ switch new_check
                 openephys_ip{1},openephys_port),'Open Ephys');
         end
 
-        % Set IP/port for recording software
+        % Set Open Ephys IP address for sending
         gui_data.connection.recording.software = 'Open Ephys';
         gui_data.connection.recording.ip = openephys_ip{1};
         gui_data.connection.recording.port = openephys_port;
@@ -2184,10 +2444,9 @@ switch new_check
         try
             spikeglx_client = SpikeGL(spikeglx_ip,spikeglx_port);
 
-            % Set IP/port for recording software
+            % Set Open Ephys IP address for sending
             gui_data.connection.recording.software = 'SpikeGLX';
             gui_data.connection.recording.client = spikeglx_client;
-
         catch me
             errordlg({sprintf('SpikeGLX not accessible on %s:%d',spikeglx_ip,spikeglx_port), ...
                 'Ensure SpikeGLX server is running (SpikeGLX console: Options >  Command Server Settings > Enable)'},'SpikeGLX');
@@ -2237,7 +2496,7 @@ switch gui_data.connection.recording.software
 
         % Convert selected probe number to letter
         alphabet = 'A':'Z';
-        probe_letter = alphabet(gui_data.probe(gui_data.selected_probe).recording_slot);
+        probe_letter = alphabet(gui_data.selected_probe);
     
         send_areas = find(~isnan(area_boundaries_sites));
         [~,send_area_sort] = sort(area_boundaries_sites(send_areas));
@@ -2297,8 +2556,7 @@ switch gui_data.connection.recording.software
         area_hexcolors,'uni',false));
 
     % (note: SpikeGLX zero indexes probe/shank)
-    areas_send_txt = [sprintf('[%d,%d]', ...
-        gui_data.probe(gui_data.selected_probe).recording_slot-1,0), ...
+    areas_send_txt = [sprintf('[%d,%d]',gui_data.selected_probe-1,0), ...
         cell2mat(arrayfun(@(x) sprintf('(%d,%d,%g,%g,%g,%s)', ...
         area_boundaries_um(x+1),area_boundaries_um(x)-1, ...
         area_rgbcolors(x,:), area_labels{x}), ...
@@ -2312,6 +2570,7 @@ switch gui_data.connection.recording.software
     warning(orig_warning);
 
     % SpikeGLX TO DO: 
+    % Get and send areas along sites that are currently being recorded
     % Get geometry of recorded sites by:
     % x = GetGeomMap(gui_data.connection.recording.client,ip)
     % (ip = probe index, zero-indexed)
@@ -2391,13 +2650,13 @@ function select_probe(h,eventdata,probe_atlas_gui)
 gui_data = guidata(probe_atlas_gui);
 
 % Get index of clicked probe
-selected_probe_idx = h == [gui_data.probe.line];
+selected_probe_idx = h == gui_data.handles.probe_line;
 
 % Color probe/axes by selected/unselected
 selected_color = [0,0,1];
 unselected_color = [0,0,0];
-set([gui_data.probe.line],'color',unselected_color);
-set(gui_data.probe(selected_probe_idx).line,'color',selected_color);
+set(gui_data.handles.probe_line(selected_probe_idx),'color',selected_color);
+set(gui_data.handles.probe_line(~selected_probe_idx),'color',unselected_color);
 
 % Set selected probe
 gui_data.selected_probe = find(selected_probe_idx);
@@ -2586,12 +2845,3 @@ ud = get(gcbf, 'UserData');
 ud.hBox.Value = 1;
 uiresume(gcbf);
 end
-
-
-
-
-
-
-
-
-
